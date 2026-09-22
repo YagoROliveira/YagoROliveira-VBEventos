@@ -2,7 +2,7 @@ import { decodeId, encodeId } from "../lib/sqids.js";
 import { duplicateParticipant, eventFull, notFound } from "../lib/errors.js";
 import { paginate } from "../lib/pagination.js";
 import { eventRepository } from "../repositories/event-repository.js";
-import { participantRepository } from "../repositories/participant-repository.js";
+import { participantRepository, type ParticipantRecord } from "../repositories/participant-repository.js";
 import type { CreateParticipantInput } from "../schemas/participant.js";
 
 export type PublicParticipant = {
@@ -13,6 +13,16 @@ export type PublicParticipant = {
   createdAt: string;
 };
 
+function toPublic(row: ParticipantRecord): PublicParticipant {
+  return {
+    id: encodeId(row.id),
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
 export const participantService = {
   async list(eventPublicId: string, page: number, perPage: number) {
     const eventId = decodeId(eventPublicId);
@@ -20,18 +30,7 @@ export const participantService = {
     if (!event) throw notFound("Event");
 
     const { rows, total } = await participantRepository.listByEvent(eventId, page, perPage);
-    return paginate(
-      rows.map((row) => ({
-        id: encodeId(row.id),
-        name: row.name,
-        email: row.email,
-        phone: row.phone,
-        createdAt: row.createdAt.toISOString(),
-      })),
-      total,
-      page,
-      perPage,
-    );
+    return paginate(rows.map(toPublic), total, page, perPage);
   },
 
   async register(eventPublicId: string, input: CreateParticipantInput) {
@@ -42,13 +41,7 @@ export const participantService = {
     if (result.kind === "full") throw eventFull();
     if (result.kind === "duplicate") throw duplicateParticipant();
 
-    return {
-      id: encodeId(result.participant.id),
-      name: result.participant.name,
-      email: result.participant.email,
-      phone: result.participant.phone,
-      createdAt: result.participant.createdAt.toISOString(),
-    } satisfies PublicParticipant;
+    return toPublic(result.participant);
   },
 
   async remove(eventPublicId: string, participantPublicId: string) {

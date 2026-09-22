@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "../lib/prisma.js";
 import { offsetOf } from "../lib/pagination.js";
 import type { CreateParticipantInput } from "../schemas/participant.js";
@@ -8,8 +8,21 @@ export type LockedEvent = {
   capacity: number;
 };
 
+export type ParticipantRecord = {
+  id: number;
+  eventId: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  createdAt: Date;
+};
+
 export const participantRepository = {
-  async listByEvent(eventId: number, page: number, perPage: number) {
+  async listByEvent(
+    eventId: number,
+    page: number,
+    perPage: number,
+  ): Promise<{ rows: ParticipantRecord[]; total: number }> {
     const [rows, total] = await Promise.all([
       prisma.participant.findMany({
         where: { eventId },
@@ -54,7 +67,7 @@ export const participantRepository = {
         });
         return { kind: "created" as const, participant, count: count + 1, capacity: event.capacity };
       } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
           return { kind: "duplicate" as const };
         }
         throw error;

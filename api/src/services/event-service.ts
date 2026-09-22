@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { capacityTooLow, notFound } from "../lib/errors.js";
 import { paginate } from "../lib/pagination.js";
 import { decodeId, encodeId } from "../lib/sqids.js";
@@ -78,7 +78,7 @@ export const eventService = {
     try {
       await eventRepository.update(id, input);
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      if (error instanceof PrismaClientKnownRequestError && error.code === "P2025") {
         throw notFound("Event");
       }
       throw error;
