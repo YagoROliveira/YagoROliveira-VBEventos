@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+.env
+*.log
+e2e
+playwright-report
+test-results
+playwright.config.ts
+src/**/*.test.ts
