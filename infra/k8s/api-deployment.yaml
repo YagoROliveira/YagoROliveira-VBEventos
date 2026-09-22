@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: events-api
+  namespace: events
+  labels:
+    app: events-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: events-api
+  template:
+    metadata:
+      labels:
+        app: events-api
+    spec:
+      containers:
+        - name: api
+          image: events-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: RUN_MIGRATIONS
+              value: "false"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          envFrom:
+            - configMapRef:
+                name: events-api
+            - secretRef:
+                name: events-api
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: events-api
+  namespace: events
+spec:
+  selector:
+    app: events-api
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http

@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: events-api-migrate
+  namespace: events
+  labels:
+    app: events-api-migrate
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: events-api:latest
+          imagePullPolicy: IfNotPresent
+          command: ["npx", "prisma", "migrate", "deploy"]
+          env:
+            - name: RUN_MIGRATIONS
+              value: "false"
+          envFrom:
+            - configMapRef:
+                name: events-api
+            - secretRef:
+                name: events-api
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

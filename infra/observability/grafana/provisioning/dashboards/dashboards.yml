@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: events
+    orgId: 1
+    folder: Events
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
