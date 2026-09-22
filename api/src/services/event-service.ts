@@ -68,15 +68,11 @@ export const eventService = {
 
   async update(publicId: string, input: UpdateEventInput) {
     const id = decodeId(publicId);
-    const existing = await eventRepository.findById(id);
-    if (!existing) throw notFound("Event");
-
-    if (input.capacity !== undefined && input.capacity < existing.registeredCount) {
-      throw capacityTooLow();
-    }
 
     try {
-      await eventRepository.update(id, input);
+      const result = await eventRepository.update(id, input);
+      if (result.kind === "missing") throw notFound("Event");
+      if (result.kind === "too_low") throw capacityTooLow();
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError && error.code === "P2025") {
         throw notFound("Event");

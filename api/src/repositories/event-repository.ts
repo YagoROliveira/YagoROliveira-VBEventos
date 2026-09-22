@@ -141,15 +141,28 @@ export const eventRepository = {
   },
 
   update(id: number, input: UpdateEventInput) {
-    return prisma.event.update({
-      where: { id },
-      data: {
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.description !== undefined ? { description: input.description ?? null } : {}),
-        ...(input.startsAt !== undefined ? { startsAt: new Date(input.startsAt) } : {}),
-        ...(input.location !== undefined ? { location: input.location } : {}),
-        ...(input.capacity !== undefined ? { capacity: input.capacity } : {}),
-      },
+    return prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT id FROM events WHERE id = ${id} FOR UPDATE
+      `;
+      if (!locked[0]) return { kind: "missing" as const };
+
+      if (input.capacity !== undefined) {
+        const registeredCount = await tx.participant.count({ where: { eventId: id } });
+        if (input.capacity < registeredCount) return { kind: "too_low" as const };
+      }
+
+      await tx.event.update({
+        where: { id },
+        data: {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.description !== undefined ? { description: input.description ?? null } : {}),
+          ...(input.startsAt !== undefined ? { startsAt: new Date(input.startsAt) } : {}),
+          ...(input.location !== undefined ? { location: input.location } : {}),
+          ...(input.capacity !== undefined ? { capacity: input.capacity } : {}),
+        },
+      });
+      return { kind: "updated" as const };
     });
   },
 

@@ -3,7 +3,6 @@ import { AppError } from "../lib/errors.js";
 import { encodeId } from "../lib/sqids.js";
 
 const createInTransaction = vi.fn();
-const findById = vi.fn();
 const listByEvent = vi.fn();
 const findParticipant = vi.fn();
 const deleteParticipant = vi.fn();
