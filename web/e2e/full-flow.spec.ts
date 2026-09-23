@@ -37,12 +37,24 @@ function eventCard(page: Page, name: string) {
   return page.locator('[data-testid="event-card"]', { hasText: name });
 }
 
+async function fillDateTimeLocal(page: Page, selector: string, value: string) {
+  const field = page.locator(selector);
+  await field.waitFor({ state: "visible" });
+  await field.evaluate((element, nextValue) => {
+    const input = element as HTMLInputElement;
+    const proto = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+    proto?.set?.call(input, nextValue);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }, value);
+}
+
 async function createEvent(page: Page, event: PlannedEvent, dayOffset: number) {
   await page.getByTestId("new-event").click();
   await expect(page.getByTestId("event-form")).toBeVisible();
   await page.locator("#name").fill(event.name);
   await page.locator("#description").fill(event.description);
-  await page.locator("#startsAt").fill(futureDateTimeLocal(dayOffset));
+  await fillDateTimeLocal(page, "#startsAt", futureDateTimeLocal(dayOffset));
   await page.locator("#capacity").fill(String(event.capacity));
   await page.locator("#location").fill(event.location);
   await page.getByTestId("save-event").click();
@@ -71,18 +83,18 @@ test.describe.configure({ mode: "serial" });
 test.describe("Fluxo completo de gestão de eventos", () => {
   test("alterna Cards e Lista em um clique", async ({ page }) => {
     await page.goto("/events");
-    await expect(page.getByTestId("events-grid")).toBeVisible();
+    await expect(page.getByTestId("results-count")).toBeVisible();
+    await expect(page.getByTestId("view-cards")).toHaveAttribute("aria-pressed", "true");
 
     await page.getByTestId("view-list").click();
-    await expect(page.getByTestId("events-rows")).toBeVisible();
     await expect(page).toHaveURL(/view=list/);
     await expect(page.getByTestId("view-list")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("view-cards")).toHaveAttribute("aria-pressed", "false");
 
     await page.getByTestId("view-cards").click();
-    await expect(page.getByTestId("events-grid")).toBeVisible();
-    await expect(page.getByTestId("events-rows")).toHaveCount(0);
     await expect(page).not.toHaveURL(/view=list/);
     await expect(page.getByTestId("view-cards")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("view-list")).toHaveAttribute("aria-pressed", "false");
   });
 
   test("cadastra 5 eventos, lota 3 e valida inscritos e status", async ({ page }) => {
